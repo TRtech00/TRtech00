@@ -59,7 +59,26 @@ jobs:
         run: exit 1
 
       - name: Static routes and file validation
-        run: php sivas-genclerbirligi-v5/tests/static_check.php
+        id: static_check
+        continue-on-error: true
+        run: php sivas-genclerbirligi-v5/tests/static_check.php > /tmp/v5-static-report.txt 2>&1
+
+      - name: Publish static failure on PR
+        if: steps.static_check.outcome == 'failure' && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo '### V5 static validation failure'
+            echo '```text'
+            cat /tmp/v5-static-report.txt
+            echo '```'
+          } > /tmp/v5-static-comment.md
+          gh pr comment "${{ github.event.pull_request.number }}" --body-file /tmp/v5-static-comment.md
+
+      - name: Stop after static failure
+        if: steps.static_check.outcome == 'failure'
+        run: exit 1
 
       - name: JavaScript syntax validation
         run: |
