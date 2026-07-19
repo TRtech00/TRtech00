@@ -23,7 +23,7 @@ $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root, 
 foreach ($iterator as $file) {
     if (!$file->isFile()) continue;
     $relative = str_replace('\\', '/', substr($file->getPathname(), strlen($root) + 1));
-    if (str_starts_with($relative, '.git/')) continue;
+    if (str_starts_with($relative, '.git/') || $relative === 'tests/static_check.php') continue;
     $content = file_get_contents($file->getPathname()) ?: '';
     if (str_ends_with($relative, '.php')) {
         foreach (['sivas-genclerbirligi-v3','sivas-genclerbirligi-v4','href="/admin/dashboard.php','href="admin/dashboard.php'] as $forbidden) {
