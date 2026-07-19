@@ -1,0 +1,60 @@
+name: Build and Test Sivas V5
+
+on:
+  push:
+    branches: [sivas-genclerbirligi-v5]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  validate-and-package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP 8.2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo_mysql, fileinfo, mbstring
+
+      - name: PHP syntax validation
+        run: find sivas-genclerbirligi-v5 -name '*.php' -print0 | xargs -0 -n1 php -l
+
+      - name: Static routes and file validation
+        run: php sivas-genclerbirligi-v5/tests/static_check.php
+
+      - name: JavaScript syntax validation
+        run: |
+          node --check sivas-genclerbirligi-v5/assets/app.js
+          node --check sivas-genclerbirligi-v5/assets/admin.js
+
+      - name: Reject generated secrets
+        run: test ! -f sivas-genclerbirligi-v5/config.php
+
+      - name: Create test report
+        run: |
+          cat > sivas-genclerbirligi-v5/TEST_RAPORU.txt <<'EOF'
+          SIVAS GENCLERBIRLIGI V5 TEST RAPORU
+          ===================================
+          PHP 8.2 syntax: BASARILI
+          Required files: BASARILI
+          Public routes: BASARILI
+          Admin sections: BASARILI
+          Old V3/V4 hardcoded paths: BULUNMADI
+          JavaScript syntax: BASARILI
+          CSS brace structure: BASARILI
+          Secret config file in package: YOK
+
+          Not: Gercek MySQL kurulumu XAMPP veya hosting ortaminda /install/ uzerinden yapilir.
+          EOF
+
+      - name: Upload tested V5 package
+        uses: actions/upload-artifact@v4
+        with:
+          name: Sivas_Genclerbirligi_Kulup_Sitesi_V5
+          path: sivas-genclerbirligi-v5/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 90
