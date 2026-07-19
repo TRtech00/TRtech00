@@ -20,7 +20,16 @@ jobs:
           extensions: pdo_mysql, fileinfo, mbstring
 
       - name: PHP syntax validation
-        run: find sivas-genclerbirligi-v5 -name '*.php' -print0 | xargs -0 -n1 php -l
+        run: |
+          set -e
+          while IFS= read -r -d '' file; do
+            if ! php -l "$file" >/tmp/php-lint.txt 2>&1; then
+              echo "PHP_LINT_FAILED_FILE=$file"
+              cat /tmp/php-lint.txt
+              exit 1
+            fi
+          done < <(find sivas-genclerbirligi-v5 -name '*.php' -print0)
+          echo "All PHP files passed syntax validation"
 
       - name: Static routes and file validation
         run: php sivas-genclerbirligi-v5/tests/static_check.php
