@@ -10,6 +10,9 @@ on:
 jobs:
   validate-and-package:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
 
@@ -20,16 +23,40 @@ jobs:
           extensions: pdo_mysql, fileinfo, mbstring
 
       - name: PHP syntax validation
+        id: php_lint
+        continue-on-error: true
         run: |
-          set -e
+          : > /tmp/v5-lint-report.txt
+          status=0
           while IFS= read -r -d '' file; do
-            if ! php -l "$file" >/tmp/php-lint.txt 2>&1; then
-              echo "PHP_LINT_FAILED_FILE=$file"
-              cat /tmp/php-lint.txt
-              exit 1
+            if ! php -l "$file" >/tmp/php-lint-single.txt 2>&1; then
+              echo "FAILED FILE: $file" >> /tmp/v5-lint-report.txt
+              cat /tmp/php-lint-single.txt >> /tmp/v5-lint-report.txt
+              status=1
             fi
           done < <(find sivas-genclerbirligi-v5 -name '*.php' -print0)
-          echo "All PHP files passed syntax validation"
+          if [ "$status" -eq 0 ]; then
+            echo "All PHP files passed syntax validation" > /tmp/v5-lint-report.txt
+          fi
+          cat /tmp/v5-lint-report.txt
+          exit "$status"
+
+      - name: Publish lint failure on PR
+        if: steps.php_lint.outcome == 'failure' && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo '### V5 PHP lint failure'
+            echo '```text'
+            cat /tmp/v5-lint-report.txt
+            echo '```'
+          } > /tmp/v5-pr-comment.md
+          gh pr comment "${{ github.event.pull_request.number }}" --body-file /tmp/v5-pr-comment.md
+
+      - name: Stop after PHP lint failure
+        if: steps.php_lint.outcome == 'failure'
+        run: exit 1
 
       - name: Static routes and file validation
         run: php sivas-genclerbirligi-v5/tests/static_check.php
