@@ -1,0 +1,33 @@
+name: Build Sivas Genclerbirligi V3
+on:
+  push:
+    branches: [sivas-genclerbirligi-v3]
+    paths:
+      - 'sivas-genclerbirligi-v3/**'
+      - '.github/workflows/build-sivas-v3.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: PHP syntax check
+        run: |
+          find sivas-genclerbirligi-v3 -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Validate required files
+        run: |
+          test -f sivas-genclerbirligi-v3/index.php
+          test -f sivas-genclerbirligi-v3/app.php
+          test -f sivas-genclerbirligi-v3/admin/index.php
+          test -f sivas-genclerbirligi-v3/install/index.php
+          test -f sivas-genclerbirligi-v3/assets/style.css
+      - name: Prepare upload directory
+        run: mkdir -p sivas-genclerbirligi-v3/uploads && touch sivas-genclerbirligi-v3/uploads/.gitkeep
+      - name: Build ZIP
+        run: zip -r Sivas_Genclerbirligi_Kulup_Sitesi_V3.zip sivas-genclerbirligi-v3 -x '*/config.php'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Sivas_Genclerbirligi_Kulup_Sitesi_V3
+          path: Sivas_Genclerbirligi_Kulup_Sitesi_V3.zip
+          retention-days: 30
