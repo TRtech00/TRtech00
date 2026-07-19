@@ -1,0 +1,115 @@
+name: Build and Test Sivas V5
+
+on:
+  push:
+    branches: [sivas-genclerbirligi-v5]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  validate-and-package:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP 8.2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo_mysql, fileinfo, mbstring
+
+      - name: PHP syntax validation
+        id: php_lint
+        continue-on-error: true
+        run: |
+          : > /tmp/v5-lint-report.txt
+          status=0
+          while IFS= read -r -d '' file; do
+            if ! php -l "$file" >/tmp/php-lint-single.txt 2>&1; then
+              echo "FAILED FILE: $file" >> /tmp/v5-lint-report.txt
+              cat /tmp/php-lint-single.txt >> /tmp/v5-lint-report.txt
+              status=1
+            fi
+          done < <(find sivas-genclerbirligi-v5 -name '*.php' -print0)
+          if [ "$status" -eq 0 ]; then
+            echo "All PHP files passed syntax validation" > /tmp/v5-lint-report.txt
+          fi
+          cat /tmp/v5-lint-report.txt
+          exit "$status"
+
+      - name: Publish lint failure on PR
+        if: steps.php_lint.outcome == 'failure' && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo '### V5 PHP lint failure'
+            echo '```text'
+            cat /tmp/v5-lint-report.txt
+            echo '```'
+          } > /tmp/v5-pr-comment.md
+          gh pr comment "${{ github.event.pull_request.number }}" --body-file /tmp/v5-pr-comment.md
+
+      - name: Stop after PHP lint failure
+        if: steps.php_lint.outcome == 'failure'
+        run: exit 1
+
+      - name: Static routes and file validation
+        id: static_check
+        continue-on-error: true
+        run: php sivas-genclerbirligi-v5/tests/static_check.php > /tmp/v5-static-report.txt 2>&1
+
+      - name: Publish static failure on PR
+        if: steps.static_check.outcome == 'failure' && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo '### V5 static validation failure'
+            echo '```text'
+            cat /tmp/v5-static-report.txt
+            echo '```'
+          } > /tmp/v5-static-comment.md
+          gh pr comment "${{ github.event.pull_request.number }}" --body-file /tmp/v5-static-comment.md
+
+      - name: Stop after static failure
+        if: steps.static_check.outcome == 'failure'
+        run: exit 1
+
+      - name: JavaScript syntax validation
+        run: |
+          node --check sivas-genclerbirligi-v5/assets/app.js
+          node --check sivas-genclerbirligi-v5/assets/admin.js
+
+      - name: Reject generated secrets
+        run: test ! -f sivas-genclerbirligi-v5/config.php
+
+      - name: Create test report
+        run: |
+          cat > sivas-genclerbirligi-v5/TEST_RAPORU.txt <<'EOF'
+          SIVAS GENCLERBIRLIGI V5 TEST RAPORU
+          ===================================
+          PHP 8.2 syntax: BASARILI
+          Required files: BASARILI
+          Public routes: BASARILI
+          Admin sections: BASARILI
+          Old V3/V4 hardcoded paths: BULUNMADI
+          JavaScript syntax: BASARILI
+          CSS brace structure: BASARILI
+          Secret config file in package: YOK
+
+          Not: Gercek MySQL kurulumu XAMPP veya hosting ortaminda /install/ uzerinden yapilir.
+          EOF
+
+      - name: Upload tested V5 package
+        uses: actions/upload-artifact@v4
+        with:
+          name: Sivas_Genclerbirligi_Kulup_Sitesi_V5
+          path: sivas-genclerbirligi-v5/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 90

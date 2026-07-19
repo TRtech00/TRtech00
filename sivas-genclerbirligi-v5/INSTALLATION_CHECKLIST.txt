@@ -1,0 +1,20 @@
+SIVAS GENCLERBIRLIGI V5 - HIZLI KURULUM
+=======================================
+
+1. ZIP dosyasini cikartin.
+2. Dosyalari C:\xampp\htdocs\sivas-genclerbirligi-v5 klasorune koyun.
+3. Bu dosyalar dogrudan o klasorde bulunmali:
+   - index.php
+   - app.php
+   - install\index.php
+   - admin\index.php
+   - assets\style.css
+4. XAMPP Apache ve MySQL servislerini baslatin.
+5. phpMyAdmin'de sivas_genclerbirligi_v5 adli bos veritabani olusturun.
+6. http://localhost/sivas-genclerbirligi-v5/install/ adresini acin.
+7. Veritabani kullanicisi root, sifre XAMPP varsayilaninda bostur.
+8. Kurulumdan sonra admin adresi:
+   http://localhost/sivas-genclerbirligi-v5/admin/
+
+404 alinirsa kontrol:
+C:\xampp\htdocs\sivas-genclerbirligi-v5\install\index.php dosyasi gercekten var olmalidir.
