@@ -56,6 +56,7 @@ $menu = [
     'standings' => ['Puan Durumu', '≡'],
     'system' => ['Sistem Kontrolü', '✓'],
 ];
+$newApplicationsCount = (int) (fetch_one("SELECT COUNT(*) total FROM applications WHERE status='Yeni'")['total'] ?? 0);
 ?><!doctype html>
 <html lang="tr">
 <head>
@@ -67,7 +68,7 @@ $menu = [
 <body class="admin-body">
 <aside class="admin-sidebar">
     <div class="admin-brand"><span>SGB</span><div><b>Yönetim Merkezi</b><small>V5.0</small></div></div>
-    <nav><?php foreach ($menu as $key => [$label,$icon]): ?><a class="<?= $section === $key ? 'active' : '' ?>" href="<?= e(url('admin/index.php?section=' . $key)) ?>"><i><?= e($icon) ?></i><span><?= e($label) ?></span><?php if ($key === 'applications'): $newCount=(int)(fetch_one("SELECT COUNT(*) total FROM applications WHERE status='Yeni'")['total']??0); if($newCount): ?><em><?= $newCount ?></em><?php endif; ?></a><?php endforeach; ?></nav>
+    <nav><?php foreach ($menu as $key => [$label,$icon]): ?><a class="<?= $section === $key ? 'active' : '' ?>" href="<?= e(url('admin/index.php?section=' . $key)) ?>"><i><?= e($icon) ?></i><span><?= e($label) ?></span><?php if ($key === 'applications' && $newApplicationsCount > 0): ?><em><?= $newApplicationsCount ?></em><?php endif; ?></a><?php endforeach; ?></nav>
     <div class="sidebar-bottom"><a href="<?= e(url('index.php')) ?>" target="_blank">Siteyi Gör ↗</a><a href="<?= e(url('admin/index.php?logout=1')) ?>">Güvenli Çıkış</a></div>
 </aside>
 <div class="admin-shell">
