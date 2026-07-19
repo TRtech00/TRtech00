@@ -2,6 +2,8 @@ name: Test Sivas V4.1
 on:
   push:
     branches: [sivas-genclerbirligi-v4-1-fix]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 jobs:
   test:
