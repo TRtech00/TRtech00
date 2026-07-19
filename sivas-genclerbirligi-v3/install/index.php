@@ -1,0 +1,24 @@
+<?php
+declare(strict_types=1);
+$error='';
+if ($_SERVER['REQUEST_METHOD']==='POST') {
+ try {
+  $host=trim($_POST['db_host']??'127.0.0.1');$port=trim($_POST['db_port']??'3306');$name=trim($_POST['db_name']??'');$user=trim($_POST['db_user']??'root');$pass=(string)($_POST['db_pass']??'');
+  $base=rtrim(trim($_POST['base_url']??''),'/');$email=trim($_POST['email']??'');$pwd=(string)($_POST['password']??'');
+  if(!$name||!filter_var($email,FILTER_VALIDATE_EMAIL)||strlen($pwd)<8||!$base) throw new RuntimeException('Alanları doğru doldurun. Şifre en az 8 karakter olmalı.');
+  $pdo=new PDO("mysql:host=$host;port=$port;dbname=$name;charset=utf8mb4",$user,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);
+  $cfg=['db_host'=>$host,'db_port'=>$port,'db_name'=>$name,'db_user'=>$user,'db_pass'=>$pass,'base_url'=>$base];
+  $out="<?php\nreturn ".var_export($cfg,true).";\n";
+  if(file_put_contents(dirname(__DIR__).'/config.php',$out)===false) throw new RuntimeException('config.php yazılamadı.');
+  require dirname(__DIR__).'/app.php'; migrate();
+  $st=db()->prepare('INSERT INTO admins(name,email,password) VALUES(?,?,?) ON DUPLICATE KEY UPDATE name=VALUES(name),password=VALUES(password)');
+  $st->execute([trim($_POST['admin_name']??'Yönetici'),$email,password_hash($pwd,PASSWORD_DEFAULT)]);
+  $defaults=['site_name'=>'Sivas Gençlerbirliği Spor','site_tagline'=>'Önceliğimiz Gençlerimiz, Hedefimiz Gelecek','league_name'=>'','hero_title'=>'Geleceği Sahada Birlikte Kuruyoruz','hero_text'=>'Altyapıdan A takıma uzanan yolculukta gençlere alan, disiplin ve takım ruhu kazandırır.','primary_color'=>'#d90429','dark_color'=>'#0d1016','contact_city'=>'Sivas','footer_text'=>'Sporun birleştirici gücüyle gençleri geleceğe hazırlıyoruz.'];
+  foreach($defaults as $k=>$v) set_setting($k,$v);
+  foreach([['A Takım','a-takim','Süper Amatör','#d90429'],['U18 Takımı','u18','U18','#5b21b6'],['U16 Takımı','u16','U16','#0f766e']] as $i=>$t){$s=db()->prepare('INSERT IGNORE INTO teams(name,slug,category,accent,sort_order) VALUES(?,?,?,?,?)');$s->execute([$t[0],$t[1],$t[2],$t[3],$i]);}
+  foreach(['academy'=>'Altyapı','first_team'=>'A Takım'] as $type=>$label){foreach([['Ad Soyad','name','text',1],['Telefon','phone','tel',1],['E-posta','email','email',0],['Doğum Tarihi','birth_date','date',1],['Mesaj','message','textarea',0]] as $i=>$f){$s=db()->prepare('INSERT INTO form_fields(form_type,label,name,field_type,required,sort_order) SELECT ?,?,?,?,?,? WHERE NOT EXISTS(SELECT 1 FROM form_fields WHERE form_type=? AND name=?)');$s->execute([$type,$f[0],$f[1],$f[2],$f[3],$i,$type,$f[1]]);}}
+  header('Location: '.$base.'/admin/');exit;
+ } catch(Throwable $e){$error=$e->getMessage();}
+}
+$guess=(isset($_SERVER['HTTPS'])?'https':'http').'://'.($_SERVER['HTTP_HOST']??'localhost').rtrim(dirname(dirname($_SERVER['SCRIPT_NAME']??'')),'/');
+?><!doctype html><html lang="tr"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>V3 Kurulum</title><style>body{font:16px system-ui;background:#0d1016;color:#fff;margin:0}.box{max-width:760px;margin:40px auto;padding:32px;background:#171b24;border-radius:24px}label{display:block;margin:14px 0 6px}input{width:100%;padding:13px;border-radius:10px;border:1px solid #374151;background:#0f131b;color:#fff;box-sizing:border-box}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}button{margin-top:22px;padding:14px 24px;border:0;border-radius:12px;background:#d90429;color:#fff;font-weight:800}.err{background:#7f1d1d;padding:12px;border-radius:10px}@media(max-width:650px){.grid{grid-template-columns:1fr}}</style><div class="box"><h1>Sivas Gençlerbirliği V3</h1><p>Local veya hosting kurulumu.</p><?php if($error):?><div class="err"><?=htmlspecialchars($error)?></div><?php endif?><form method="post"><div class="grid"><div><label>Veritabanı sunucusu</label><input name="db_host" value="127.0.0.1"></div><div><label>Port</label><input name="db_port" value="3306"></div><div><label>Veritabanı adı</label><input name="db_name" value="sivas_genclerbirligi" required></div><div><label>Kullanıcı</label><input name="db_user" value="root"></div><div><label>Veritabanı şifresi</label><input type="password" name="db_pass"></div><div><label>Site adresi</label><input name="base_url" value="<?=htmlspecialchars($guess)?>" required></div><div><label>Yönetici adı</label><input name="admin_name" value="Kulüp Yöneticisi" required></div><div><label>Yönetici e-posta</label><input type="email" name="email" required></div><div><label>Yönetici şifre</label><input type="password" name="password" minlength="8" required></div></div><button>Kurulumu Tamamla</button></form></div></html>

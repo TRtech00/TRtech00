@@ -1,0 +1,34 @@
+name: Test Sivas V4.1
+on:
+  push:
+    branches: [sivas-genclerbirligi-v4-1-fix]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo_mysql, fileinfo
+      - name: PHP syntax
+        run: find sivas-genclerbirligi-v3 -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Required files and assets
+        run: |
+          test -f sivas-genclerbirligi-v3/index.php
+          test -f sivas-genclerbirligi-v3/admin/index.php
+          test -f sivas-genclerbirligi-v3/admin/dashboard.php
+          test -f sivas-genclerbirligi-v3/install/index.php
+          test -s sivas-genclerbirligi-v3/assets/style.css
+          test -s sivas-genclerbirligi-v3/assets/admin.css
+          test -s sivas-genclerbirligi-v3/assets/app.js
+          test -s sivas-genclerbirligi-v3/assets/admin.js
+      - name: Package
+        run: zip -r Sivas_Genclerbirligi_V4_1_Duzeltilmis.zip sivas-genclerbirligi-v3 -x '*/config.php' '*/uploads/*'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Sivas_Genclerbirligi_V4_1_Duzeltilmis
+          path: Sivas_Genclerbirligi_V4_1_Duzeltilmis.zip
