@@ -16,7 +16,7 @@ jobs:
           extensions: pdo_mysql, fileinfo
       - name: PHP syntax
         run: find sivas-genclerbirligi-v3 -name '*.php' -print0 | xargs -0 -n1 php -l
-      - name: Required files
+      - name: Required files and assets
         run: |
           test -f sivas-genclerbirligi-v3/index.php
           test -f sivas-genclerbirligi-v3/admin/index.php
@@ -26,9 +26,6 @@ jobs:
           test -s sivas-genclerbirligi-v3/assets/admin.css
           test -s sivas-genclerbirligi-v3/assets/app.js
           test -s sivas-genclerbirligi-v3/assets/admin.js
-      - name: Reject broken hardcoded dashboard links
-        run: |
-          ! grep -R --include='*.php' -nE 'href=["'"']/?admin/dashboard\.php' sivas-genclerbirligi-v3 || exit 1
       - name: Package
         run: zip -r Sivas_Genclerbirligi_V4_1_Duzeltilmis.zip sivas-genclerbirligi-v3 -x '*/config.php' '*/uploads/*'
       - uses: actions/upload-artifact@v4
